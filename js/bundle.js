@@ -70,24 +70,21 @@ class CustomVideoPlayer {
     this.container = container;
     this.video = container.querySelector('video');
     this.playButton = container.querySelector('.btn-play-video');
-    this.pauseButton = container.querySelector('.btn-pause-video');
 
     this.init();
   }
 
   init() {
     this.video.removeAttribute('controls');
-    this.pauseButton.style.display = 'none';
-
     this.bindEvents();
   }
 
   bindEvents() {
     this.playButton.addEventListener('click', () => this.play());
-    this.pauseButton.addEventListener('click', () => this.pause());
     this.video.addEventListener('play', () => this.onPlay());
     this.video.addEventListener('pause', () => this.onPause());
     this.video.addEventListener('ended', () => this.onEnded());
+    this.video.addEventListener('click', () => this.togglePlay());
   }
 
   play() {
@@ -104,21 +101,26 @@ class CustomVideoPlayer {
     }
   }
 
+  togglePlay() {
+    if (this.video.paused) {
+      this.play();
+    } else {
+      this.pause();
+    }
+  }
+
   onPlay() {
     this.playButton.style.display = 'none';
-    this.pauseButton.style.display = 'block';
     this.container.classList.add('playing');
   }
 
   onPause() {
     this.playButton.style.display = 'block';
-    this.pauseButton.style.display = 'none';
     this.container.classList.remove('playing');
   }
 
   onEnded() {
     this.playButton.style.display = 'block';
-    this.pauseButton.style.display = 'none';
     this.container.classList.remove('playing');
   }
 }
