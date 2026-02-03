@@ -70,121 +70,66 @@ class CustomVideoPlayer {
     this.container = container;
     this.video = container.querySelector('video');
     this.playButton = container.querySelector('.btn-play-video');
-    this.hasUserInteracted = false;
 
     this.init();
   }
 
   init() {
-    // Сначала установим poster как background чтобы не мешал
-    const poster = this.video.getAttribute('poster');
-    if (poster) {
-      this.container.style.backgroundImage = `url(${poster})`;
-      this.container.style.backgroundSize = 'cover';
-      this.container.style.backgroundPosition = 'center';
-    }
-
-    // Минимальные атрибуты
+    // Для всех устройств одинаково
     this.video.removeAttribute('controls');
     this.video.setAttribute('playsinline', '');
     this.video.setAttribute('webkit-playsinline', '');
-
-    // Важно: preload='none' для экономии трафика и проблем с воспроизведением
-    this.video.setAttribute('preload', 'none');
-
-    // Убедимся, что видео не пытается загрузиться заранее
-    this.video.load();
+    this.video.setAttribute('preload', 'metadata');
 
     this.bindEvents();
   }
 
   bindEvents() {
+    // Простой click, без touchstart отдельно
     this.playButton.addEventListener('click', (e) => {
       e.preventDefault();
-      e.stopPropagation();
-      this.handlePlay();
-    }, { passive: false });
+      this.play();
+    });
 
-    this.playButton.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      this.handlePlay();
-    }, { passive: false });
-
-    this.video.addEventListener('playing', () => this.onPlay());
+    this.video.addEventListener('play', () => this.onPlay());
     this.video.addEventListener('pause', () => this.onPause());
     this.video.addEventListener('ended', () => this.onEnded());
-    this.video.addEventListener('error', (e) => this.onError(e));
-
-    // Также слушаем canplaythrough для уверенности, что видео готово
-    this.video.addEventListener('canplaythrough', () => {
-      this.videoReady = true;
-    });
+    this.video.addEventListener('click', () => this.togglePlay());
   }
 
-  handlePlay() {
-    this.hasUserInteracted = true;
-
-    // Если видео еще не загружено, загружаем его
-    if (this.video.readyState < 3) {
-      this.playButton.textContent = 'Загрузка...';
-      this.video.load();
-
-      this.video.addEventListener('canplaythrough', () => {
-        this.playVideo();
-      }, { once: true });
-    } else {
-      this.playVideo();
-    }
-  }
-
-  playVideo() {
+  play() {
     if (this.video.paused) {
-      // Пробуем воспроизвести
-      const playPromise = this.video.play();
-
-      if (playPromise !== undefined) {
-        playPromise
-            .then(() => {
-              // Успех
-              this.onPlay();
-            })
-            .catch(error => {
-              console.log('Play error:', error);
-
-              // Пробуем с muted
-              this.video.muted = true;
-              this.video.play()
-                  .then(() => {
-                    this.onPlay();
-                    // Через секунду пробуем включить звук
-                    setTimeout(() => {
-                      this.video.muted = false;
-                    }, 1000);
-                  })
-                  .catch(error2 => {
-                    console.log('Muted play also failed:', error2);
-
-                    // Последняя попытка - показываем нативные controls
-                    this.showNativeControls();
-                  });
-            });
-      }
+      this.video.play().catch(error => {
+        // Если ошибка, показываем нативные controls
+        this.video.setAttribute('controls', '');
+        this.playButton.style.display = 'none';
+        // Пробуем воспроизвести снова с controls
+        setTimeout(() => {
+          this.video.play();
+        }, 100);
+      });
+      this.container.classList.add('playing');
     }
   }
 
-  showNativeControls() {
-    this.video.setAttribute('controls', '');
-    this.playButton.style.display = 'none';
+  pause() {
+    if (!this.video.paused) {
+      this.video.pause();
+      this.container.classList.remove('playing');
+    }
+  }
 
-    // Пробуем воспроизвести с нативными controls
-    setTimeout(() => {
-      this.video.play().catch(e => console.log('Native controls play failed:', e));
-    }, 300);
+  togglePlay() {
+    if (this.video.paused) {
+      this.play();
+    } else {
+      this.pause();
+    }
   }
 
   onPlay() {
     this.playButton.style.display = 'none';
-    this.container.style.backgroundImage = 'none';
+    this.video.removeAttribute('controls'); // Убираем если были показаны
     this.container.classList.add('playing');
   }
 
@@ -196,12 +141,6 @@ class CustomVideoPlayer {
   onEnded() {
     this.playButton.style.display = 'block';
     this.container.classList.remove('playing');
-  }
-
-  onError(e) {
-    console.log('Video error:', this.video.error);
-    this.playButton.style.display = 'block';
-    this.playButton.textContent = 'Ошибка загрузки';
   }
 }
 
