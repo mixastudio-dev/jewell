@@ -366,23 +366,49 @@ document.addEventListener('DOMContentLoaded', function() {
 
   anchorLinks.forEach(link => {
     link.addEventListener('click', function(e) {
-      e.preventDefault();
-
       const targetId = this.getAttribute('href');
-      if (targetId === '#') return;
+
+      // Если это просто # или пустая ссылка
+      if (targetId === '#' || targetId === '') return;
 
       const targetElement = document.querySelector(targetId);
+      if (!targetElement) return;
+
+      e.preventDefault();
+
+      const headerHeight = document.querySelector('header') ? document.querySelector('header').offsetHeight : 0;
+      const yOffset = -headerHeight;
+
+      const elementPosition = targetElement.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset + yOffset;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      });
+    });
+  });
+});
+
+window.addEventListener('load', function() {
+  const hash = window.location.hash;
+  if (hash) {
+    setTimeout(() => {
+      const targetElement = document.querySelector(hash);
       if (targetElement) {
-        const yOffset = -200;
-        const y = targetElement.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        const headerHeight = document.querySelector('header') ? document.querySelector('header').offsetHeight : 0;
+        const yOffset = -headerHeight;
+
+        const elementPosition = targetElement.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset + yOffset;
 
         window.scrollTo({
-          top: y,
+          top: offsetPosition,
           behavior: 'smooth'
         });
       }
-    });
-  });
+    }, 100);
+  }
 });
 
 class CustomSelect {
@@ -506,7 +532,7 @@ function checkVisibility() {
 
     // Проверяем, находится ли блок в футере
     const isInFooter = block.closest('footer');
-    const offset = (isInFooter || window.innerWidth < 768) ? 0 : 100;
+    const offset = (isInFooter || window.innerWidth < 768) ? 0 : 0;
 
     const isVisible = rect.top <= windowHeight - offset && rect.bottom >= 0;
 
@@ -532,7 +558,7 @@ function checkAllBlocks() {
     const windowHeight = window.innerHeight;
 
     const isInFooter = block.closest('footer');
-    const offset = (isInFooter || window.innerWidth < 768) ? 0 : 100;
+    const offset = (isInFooter || window.innerWidth < 768) ? 0 : 0;
 
     if (rect.top <= windowHeight - offset && rect.bottom >= 0) {
       const delay = block.getAttribute('data-delay') || 0;
