@@ -368,7 +368,6 @@ document.addEventListener('DOMContentLoaded', function() {
     link.addEventListener('click', function(e) {
       const targetId = this.getAttribute('href');
 
-      // Если это просто # или пустая ссылка
       if (targetId === '#' || targetId === '') return;
 
       const targetElement = document.querySelector(targetId);
@@ -376,16 +375,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
       e.preventDefault();
 
-      const headerHeight = document.querySelector('header') ? document.querySelector('header').offsetHeight : 0;
-      const yOffset = -headerHeight;
+      const currentPath = window.location.pathname;
+      const linkPath = this.pathname;
 
-      const elementPosition = targetElement.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.pageYOffset + yOffset;
+      if (linkPath !== '' && linkPath !== currentPath) {
+        const url = linkPath + targetId;
+        window.location.href = url;
+      } else {
+        const headerHeight = document.querySelector('header') ? document.querySelector('header').offsetHeight : 0;
+        const yOffset = -headerHeight;
 
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-      });
+        const elementPosition = targetElement.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset + yOffset;
+
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        });
+
+        history.pushState(null, null, targetId);
+      }
     });
   });
 });
@@ -407,7 +416,7 @@ window.addEventListener('load', function() {
           behavior: 'smooth'
         });
       }
-    }, 100);
+    }, 500);
   }
 });
 
