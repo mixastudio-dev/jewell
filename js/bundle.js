@@ -88,7 +88,6 @@ class CustomVideoPlayer {
     this.video.addEventListener('play', () => this.onPlay());
     this.video.addEventListener('pause', () => this.onPause());
     this.video.addEventListener('ended', () => this.onEnded());
-    this.video.addEventListener('click', () => this.togglePlay());
   }
 
   play() {
@@ -102,14 +101,6 @@ class CustomVideoPlayer {
     if (!this.video.paused) {
       this.video.pause();
       this.container.classList.remove('playing');
-    }
-  }
-
-  togglePlay() {
-    if (this.video.paused) {
-      this.play();
-    } else {
-      this.pause();
     }
   }
 
