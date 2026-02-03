@@ -75,7 +75,14 @@ class CustomVideoPlayer {
   }
 
   init() {
-    this.video.removeAttribute('controls');
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    if (!isMobile) {
+      this.video.removeAttribute('controls');
+    } else {
+      this.video.setAttribute('playsinline', '');
+      this.video.setAttribute('webkit-playsinline', '');
+    }
 
     this.video.setAttribute('playsinline', '');
     this.video.setAttribute('webkit-playsinline', '');
@@ -88,7 +95,12 @@ class CustomVideoPlayer {
   }
 
   bindEvents() {
-    this.playButton.addEventListener('click', () => this.play());
+    this.playButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.play();
+    });
+
     this.video.addEventListener('play', () => this.onPlay());
     this.video.addEventListener('pause', () => this.onPause());
     this.video.addEventListener('ended', () => this.onEnded());
@@ -97,10 +109,26 @@ class CustomVideoPlayer {
 
   play() {
     if (this.video.paused) {
-      this.video.play().catch(error => {
-        this.playButton.style.display = 'block';
-      });
-      this.container.classList.add('playing');
+      const playPromise = this.video.play();
+
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
+          this.onPlay();
+        }).catch(error => {
+          const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+          if (isMobile) {
+            this.video.setAttribute('controls', '');
+            this.playButton.style.display = 'none';
+            setTimeout(() => {
+              this.video.play().catch(() => {
+                this.playButton.style.display = 'block';
+              });
+            }, 100);
+          } else {
+            this.playButton.style.display = 'block';
+          }
+        });
+      }
     }
   }
 
@@ -121,6 +149,7 @@ class CustomVideoPlayer {
 
   onPlay() {
     this.playButton.style.display = 'none';
+    this.video.removeAttribute('controls');
     this.container.classList.add('playing');
   }
 
