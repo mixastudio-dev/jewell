@@ -70,105 +70,121 @@ class CustomVideoPlayer {
     this.container = container;
     this.video = container.querySelector('video');
     this.playButton = container.querySelector('.btn-play-video');
+    this.hasUserInteracted = false;
 
     this.init();
   }
 
   init() {
-    // Важные атрибуты для Android
+    // Сначала установим poster как background чтобы не мешал
+    const poster = this.video.getAttribute('poster');
+    if (poster) {
+      this.container.style.backgroundImage = `url(${poster})`;
+      this.container.style.backgroundSize = 'cover';
+      this.container.style.backgroundPosition = 'center';
+    }
+
+    // Минимальные атрибуты
     this.video.removeAttribute('controls');
     this.video.setAttribute('playsinline', '');
     this.video.setAttribute('webkit-playsinline', '');
-    this.video.setAttribute('muted', 'muted'); // Добавляем muted для обхода ограничений
-    this.video.setAttribute('preload', 'metadata');
 
-    // Для некоторых браузеров
-    this.video.setAttribute('x5-playsinline', 'true');
-    this.video.setAttribute('x5-video-player-type', 'h5-page');
-    this.video.setAttribute('x5-video-player-fullscreen', 'false');
+    // Важно: preload='none' для экономии трафика и проблем с воспроизведением
+    this.video.setAttribute('preload', 'none');
+
+    // Убедимся, что видео не пытается загрузиться заранее
+    this.video.load();
 
     this.bindEvents();
-
-    // Попробуем загрузить видео заранее
-    this.video.load();
   }
 
   bindEvents() {
-    this.playButton.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      this.play();
-    }, { passive: false });
-
     this.playButton.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      this.play();
-    });
+      this.handlePlay();
+    }, { passive: false });
 
-    this.video.addEventListener('play', () => this.onPlay());
+    this.playButton.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      this.handlePlay();
+    }, { passive: false });
+
+    this.video.addEventListener('playing', () => this.onPlay());
     this.video.addEventListener('pause', () => this.onPause());
     this.video.addEventListener('ended', () => this.onEnded());
-    this.video.addEventListener('click', () => this.togglePlay());
+    this.video.addEventListener('error', (e) => this.onError(e));
 
-    // При первом взаимодействии с видео убираем muted
-    this.video.addEventListener('play', () => {
-      if (this.video.muted) {
-        this.video.muted = false;
-      }
-    }, { once: true });
+    // Также слушаем canplaythrough для уверенности, что видео готово
+    this.video.addEventListener('canplaythrough', () => {
+      this.videoReady = true;
+    });
   }
 
-  play() {
-    if (this.video.paused) {
-      // Разрешаем звук при первом воспроизведении
-      this.video.muted = false;
+  handlePlay() {
+    this.hasUserInteracted = true;
 
+    // Если видео еще не загружено, загружаем его
+    if (this.video.readyState < 3) {
+      this.playButton.textContent = 'Загрузка...';
+      this.video.load();
+
+      this.video.addEventListener('canplaythrough', () => {
+        this.playVideo();
+      }, { once: true });
+    } else {
+      this.playVideo();
+    }
+  }
+
+  playVideo() {
+    if (this.video.paused) {
+      // Пробуем воспроизвести
       const playPromise = this.video.play();
 
       if (playPromise !== undefined) {
-        playPromise.then(() => {
-          // Успешно запустилось
-          this.onPlay();
-        }).catch(error => {
-          console.log('Ошибка воспроизведения:', error);
+        playPromise
+            .then(() => {
+              // Успех
+              this.onPlay();
+            })
+            .catch(error => {
+              console.log('Play error:', error);
 
-          // Пробуем с muted
-          this.video.muted = true;
-          this.video.play().then(() => {
-            this.onPlay();
-          }).catch(error2 => {
-            console.log('Ошибка воспроизведения даже с muted:', error2);
-            this.playButton.style.display = 'block';
+              // Пробуем с muted
+              this.video.muted = true;
+              this.video.play()
+                  .then(() => {
+                    this.onPlay();
+                    // Через секунду пробуем включить звук
+                    setTimeout(() => {
+                      this.video.muted = false;
+                    }, 1000);
+                  })
+                  .catch(error2 => {
+                    console.log('Muted play also failed:', error2);
 
-            // Показываем нативные controls как последний вариант
-            setTimeout(() => {
-              this.video.setAttribute('controls', '');
-              this.playButton.style.display = 'none';
-            }, 500);
-          });
-        });
+                    // Последняя попытка - показываем нативные controls
+                    this.showNativeControls();
+                  });
+            });
       }
     }
   }
 
-  pause() {
-    if (!this.video.paused) {
-      this.video.pause();
-      this.container.classList.remove('playing');
-    }
-  }
+  showNativeControls() {
+    this.video.setAttribute('controls', '');
+    this.playButton.style.display = 'none';
 
-  togglePlay() {
-    if (this.video.paused) {
-      this.play();
-    } else {
-      this.pause();
-    }
+    // Пробуем воспроизвести с нативными controls
+    setTimeout(() => {
+      this.video.play().catch(e => console.log('Native controls play failed:', e));
+    }, 300);
   }
 
   onPlay() {
     this.playButton.style.display = 'none';
+    this.container.style.backgroundImage = 'none';
     this.container.classList.add('playing');
   }
 
@@ -180,6 +196,12 @@ class CustomVideoPlayer {
   onEnded() {
     this.playButton.style.display = 'block';
     this.container.classList.remove('playing');
+  }
+
+  onError(e) {
+    console.log('Video error:', this.video.error);
+    this.playButton.style.display = 'block';
+    this.playButton.textContent = 'Ошибка загрузки';
   }
 }
 
