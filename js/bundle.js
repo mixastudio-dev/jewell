@@ -75,26 +75,31 @@ class CustomVideoPlayer {
   }
 
   init() {
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
-    if (!isMobile) {
-      this.video.removeAttribute('controls');
-    } else {
-      this.video.setAttribute('playsinline', '');
-      this.video.setAttribute('webkit-playsinline', '');
-    }
-
+    // Важные атрибуты для Android
+    this.video.removeAttribute('controls');
     this.video.setAttribute('playsinline', '');
     this.video.setAttribute('webkit-playsinline', '');
-    this.video.setAttribute('x5-playsinline', '');
-    this.video.setAttribute('x5-video-player-type', 'h5');
+    this.video.setAttribute('muted', 'muted'); // Добавляем muted для обхода ограничений
+    this.video.setAttribute('preload', 'metadata');
+
+    // Для некоторых браузеров
+    this.video.setAttribute('x5-playsinline', 'true');
+    this.video.setAttribute('x5-video-player-type', 'h5-page');
     this.video.setAttribute('x5-video-player-fullscreen', 'false');
-    this.video.setAttribute('x5-video-orientation', 'portrait');
 
     this.bindEvents();
+
+    // Попробуем загрузить видео заранее
+    this.video.load();
   }
 
   bindEvents() {
+    this.playButton.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.play();
+    }, { passive: false });
+
     this.playButton.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -105,28 +110,43 @@ class CustomVideoPlayer {
     this.video.addEventListener('pause', () => this.onPause());
     this.video.addEventListener('ended', () => this.onEnded());
     this.video.addEventListener('click', () => this.togglePlay());
+
+    // При первом взаимодействии с видео убираем muted
+    this.video.addEventListener('play', () => {
+      if (this.video.muted) {
+        this.video.muted = false;
+      }
+    }, { once: true });
   }
 
   play() {
     if (this.video.paused) {
+      // Разрешаем звук при первом воспроизведении
+      this.video.muted = false;
+
       const playPromise = this.video.play();
 
       if (playPromise !== undefined) {
         playPromise.then(() => {
+          // Успешно запустилось
           this.onPlay();
         }).catch(error => {
-          const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-          if (isMobile) {
-            this.video.setAttribute('controls', '');
-            this.playButton.style.display = 'none';
-            setTimeout(() => {
-              this.video.play().catch(() => {
-                this.playButton.style.display = 'block';
-              });
-            }, 100);
-          } else {
+          console.log('Ошибка воспроизведения:', error);
+
+          // Пробуем с muted
+          this.video.muted = true;
+          this.video.play().then(() => {
+            this.onPlay();
+          }).catch(error2 => {
+            console.log('Ошибка воспроизведения даже с muted:', error2);
             this.playButton.style.display = 'block';
-          }
+
+            // Показываем нативные controls как последний вариант
+            setTimeout(() => {
+              this.video.setAttribute('controls', '');
+              this.playButton.style.display = 'none';
+            }, 500);
+          });
         });
       }
     }
@@ -149,7 +169,6 @@ class CustomVideoPlayer {
 
   onPlay() {
     this.playButton.style.display = 'none';
-    this.video.removeAttribute('controls');
     this.container.classList.add('playing');
   }
 
