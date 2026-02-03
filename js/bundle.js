@@ -488,3 +488,31 @@ var swiper4 = new Swiper(".gallery-slider-main", {
     swiper: swiper3,
   },
 });
+
+
+function checkVisibility() {
+  const blocks = document.querySelectorAll('.animate-block');
+
+  blocks.forEach(block => {
+    if (block.hasAttribute('data-animated')) {
+      return;
+    }
+
+    const rect = block.getBoundingClientRect();
+    const windowHeight = window.innerHeight;
+    const offset = 200;
+
+    const isVisible = rect.top <= windowHeight - offset && rect.bottom >= 0;
+
+    if (isVisible) {
+      const delay = block.getAttribute('data-delay') || 0;
+      setTimeout(() => {
+        block.classList.add('animated');
+        block.setAttribute('data-animated', 'true');
+      }, parseInt(delay));
+    }
+  });
+}
+
+window.addEventListener('load', checkVisibility);
+window.addEventListener('scroll', checkVisibility);
