@@ -491,7 +491,10 @@ function checkVisibility() {
 
     const rect = block.getBoundingClientRect();
     const windowHeight = window.innerHeight;
-    const offset = 150;
+
+    // Проверяем, находится ли блок в футере
+    const isInFooter = block.closest('footer');
+    const offset = (isInFooter || window.innerWidth < 768) ? 0 : 100;
 
     const isVisible = rect.top <= windowHeight - offset && rect.bottom >= 0;
 
@@ -505,5 +508,37 @@ function checkVisibility() {
   });
 }
 
-window.addEventListener('load', checkVisibility);
+function checkAllBlocks() {
+  const blocks = document.querySelectorAll('.animate-block');
+
+  blocks.forEach(block => {
+    if (block.hasAttribute('data-animated')) {
+      return;
+    }
+
+    const rect = block.getBoundingClientRect();
+    const windowHeight = window.innerHeight;
+
+    const isInFooter = block.closest('footer');
+    const offset = (isInFooter || window.innerWidth < 768) ? 0 : 100;
+
+    if (rect.top <= windowHeight - offset && rect.bottom >= 0) {
+      const delay = block.getAttribute('data-delay') || 0;
+      setTimeout(() => {
+        block.classList.add('animated');
+        block.setAttribute('data-animated', 'true');
+      }, parseInt(delay));
+    }
+  });
+}
+
+window.addEventListener('load', function() {
+  checkVisibility();
+  setTimeout(checkAllBlocks, 500);
+});
+
 window.addEventListener('scroll', checkVisibility);
+
+window.addEventListener('resize', function() {
+  setTimeout(checkAllBlocks, 100);
+});
