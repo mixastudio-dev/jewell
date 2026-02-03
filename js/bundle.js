@@ -76,6 +76,14 @@ class CustomVideoPlayer {
 
   init() {
     this.video.removeAttribute('controls');
+
+    this.video.setAttribute('playsinline', '');
+    this.video.setAttribute('webkit-playsinline', '');
+    this.video.setAttribute('x5-playsinline', '');
+    this.video.setAttribute('x5-video-player-type', 'h5');
+    this.video.setAttribute('x5-video-player-fullscreen', 'false');
+    this.video.setAttribute('x5-video-orientation', 'portrait');
+
     this.bindEvents();
   }
 
@@ -89,7 +97,9 @@ class CustomVideoPlayer {
 
   play() {
     if (this.video.paused) {
-      this.video.play();
+      this.video.play().catch(error => {
+        this.playButton.style.display = 'block';
+      });
       this.container.classList.add('playing');
     }
   }
