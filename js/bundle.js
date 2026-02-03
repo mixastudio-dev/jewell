@@ -491,7 +491,7 @@ function checkVisibility() {
 
     const rect = block.getBoundingClientRect();
     const windowHeight = window.innerHeight;
-    const offset = 200;
+    const offset = 150;
 
     const isVisible = rect.top <= windowHeight - offset && rect.bottom >= 0;
 
