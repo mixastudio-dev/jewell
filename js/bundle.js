@@ -65,34 +65,78 @@ var swiper2 = new Swiper(".work-videos-slider", {
   }
 });
 
+class CustomVideoPlayer {
+  constructor(container) {
+    this.container = container;
+    this.video = container.querySelector('video');
+    this.playButton = container.querySelector('.btn-play-video');
+    this.pauseButton = container.querySelector('.btn-pause-video');
+
+    this.init();
+  }
+
+  init() {
+    this.video.removeAttribute('controls');
+    this.pauseButton.style.display = 'none';
+
+    this.bindEvents();
+  }
+
+  bindEvents() {
+    this.playButton.addEventListener('click', () => this.play());
+    this.pauseButton.addEventListener('click', () => this.pause());
+    this.video.addEventListener('play', () => this.onPlay());
+    this.video.addEventListener('pause', () => this.onPause());
+    this.video.addEventListener('ended', () => this.onEnded());
+    this.video.addEventListener('click', () => this.togglePlay());
+  }
+
+  play() {
+    if (this.video.paused) {
+      this.video.play();
+      this.container.classList.add('playing');
+    }
+  }
+
+  pause() {
+    if (!this.video.paused) {
+      this.video.pause();
+      this.container.classList.remove('playing');
+    }
+  }
+
+  togglePlay() {
+    if (this.video.paused) {
+      this.play();
+    } else {
+      this.pause();
+    }
+  }
+
+  onPlay() {
+    this.playButton.style.display = 'none';
+    this.pauseButton.style.display = 'block';
+    this.container.classList.add('playing');
+  }
+
+  onPause() {
+    this.playButton.style.display = 'block';
+    this.pauseButton.style.display = 'none';
+    this.container.classList.remove('playing');
+  }
+
+  onEnded() {
+    this.playButton.style.display = 'block';
+    this.pauseButton.style.display = 'none';
+    this.container.classList.remove('playing');
+  }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   const videoContainers = document.querySelectorAll('.custom-video');
 
   videoContainers.forEach(container => {
-    const video = container.querySelector('video');
-    const playButton = container.querySelector('.btn-play-video');
-
-    video.removeAttribute('controls');
-
-    playButton.addEventListener('click', function() {
-      if (video.paused) {
-        video.play();
-        playButton.style.display = 'none';
-      }
-    });
-
-    video.addEventListener('pause', function() {
-      playButton.style.display = 'block';
-    });
-
-    video.addEventListener('ended', function() {
-      playButton.style.display = 'block';});
-
-    video.addEventListener('click', function() {
-      if (!video.paused) {
-        playButton.style.display = 'none';
-      }
-    });
+    new CustomVideoPlayer(container);
   });
 });
 
@@ -102,57 +146,6 @@ document.addEventListener('DOMContentLoaded', function() {
       closeButtons = document.querySelectorAll('.modal-dialog .modal-close');
 
   var currentOpenModal = null;
-  var enterModalTimer = null;
-  var isExitModalShown = false;
-  var hasEnterModalShownInSession = false;
-  var mobileExitTimer = null;
-
-  function getCookie(name) {
-    const matches = document.cookie.match(new RegExp(
-        "(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"
-    ));
-    return matches ? decodeURIComponent(matches[1]) : undefined;
-  }
-
-  function setCookie(name, value, options = {}) {
-    options = {
-      path: '/',
-      ...options
-    };
-
-    if (options.expires instanceof Date) {
-      options.expires = options.expires.toUTCString();
-    }
-
-    let updatedCookie = encodeURIComponent(name) + "=" + encodeURIComponent(value);
-
-    for (let optionKey in options) {
-      updatedCookie += "; " + optionKey;
-      let optionValue = options[optionKey];
-      if (optionValue !== true) {
-        updatedCookie += "=" + optionValue;
-      }
-    }
-
-    document.cookie = updatedCookie;
-  }
-
-  function getSessionStorageItem(key) {
-    try {
-      return sessionStorage.getItem(key);
-    } catch (e) {
-      console.warn('sessionStorage недоступен:', e);
-      return null;
-    }
-  }
-
-  function setSessionStorageItem(key, value) {
-    try {
-      sessionStorage.setItem(key, value);
-    } catch (e) {
-      console.warn('Ошибка записи в sessionStorage:', e);
-    }
-  }
 
   async function openModal(modalBtn) {
     return new Promise(resolve => {
@@ -172,33 +165,6 @@ document.addEventListener('DOMContentLoaded', function() {
         resolve();
       }, 0);
     });
-  }
-
-  async function openModalById(modalId) {
-    var modalElem = document.querySelector('.modal-dialog.' + modalId);
-
-    if (!modalElem) return;
-
-    if (modalId === 'modal-form-light-exit' && isExitModalShown) return;
-
-    if (currentOpenModal && currentOpenModal !== modalElem) {
-      closeModalDirectly(currentOpenModal);
-    }
-
-    overlay.classList.add('modal-open');
-    modalElem.style.display = 'flex';
-
-    setTimeout(function() {
-      modalElem.classList.add('modal-opening');
-      currentOpenModal = modalElem;
-
-      if (modalId === 'modal-form-light-exit') {
-        isExitModalShown = true;
-      } else if (modalId === 'modal-form-light-enter') {
-        setSessionStorageItem('enterModalShownInSession', 'true');
-        hasEnterModalShownInSession = true;
-      }
-    }, 10);
   }
 
   async function closeModal(closeBtn) {
@@ -223,87 +189,21 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  function scheduleEnterModal() {
-    var wasShownInSession = getSessionStorageItem('enterModalShownInSession');
-
-    if (wasShownInSession === 'true' || hasEnterModalShownInSession) {
-      return;
-    }
-
-    enterModalTimer = setTimeout(function() {
-      if (!hasEnterModalShownInSession && getSessionStorageItem('enterModalShownInSession') !== 'true') {
-        openModalById('modal-form-light-enter');
-      }
-    }, 30000);
-  }
-
-  function setupExitModal() {
-    if (window.innerWidth > 1024) {
-      var showExitTimeout;
-
-      document.addEventListener('mousemove', function(e) {
-        if (e.clientY < 10 && !isExitModalShown) {
-          if (!showExitTimeout) {
-            showExitTimeout = setTimeout(function() {
-              openModalById('modal-form-light-exit');
-              showExitTimeout = null;
-            }, 300);
-          }
-        } else {
-          if (showExitTimeout) {
-            clearTimeout(showExitTimeout);
-            showExitTimeout = null;
-          }
-        }
-      });
-    } else {
-      mobileExitTimer = setTimeout(function() {
-        if (!isExitModalShown) {
-          openModalById('modal-form-light-exit');
-        }
-      }, 15000);
-    }
-  }
-
-  function initCookieModal() {
-    const cookieAccepted = getCookie('cookieAccepted');
-    const cookieModal = document.querySelector('.modal-dialog.modal-cookie');
-    const acceptBtn = document.querySelector('.btn-accept');
-
-    if (!cookieAccepted && cookieModal && acceptBtn) {
-      setTimeout(() => {
-        openModalById('modal-cookie');
-      }, 1000);
-
-      acceptBtn.addEventListener('click', function(e) {
-        e.preventDefault();
-        setCookie('cookieAccepted', 'true', {
-          expires: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-          secure: true,
-          samesite: 'strict'
-        });
-
-        const closeBtn = cookieModal.querySelector('.modal-close');
-        if (closeBtn) {
-          closeModal(closeBtn);
-        } else {
-          closeModalDirectly(cookieModal);
-        }
-      });
-    }
-  }
-
   function init() {
     document.querySelectorAll('.modal-dialog').forEach(function(modal) {
       modal.classList.remove('modal-opening');
       modal.style.display = 'none';
     });
 
-    hasEnterModalShownInSession = getSessionStorageItem('enterModalShownInSession') === 'true';
-
-    scheduleEnterModal();
-    setupExitModal();
-    initCookieModal();
+    var backButtons = document.querySelectorAll('.btn-back[data-dismiss="modal"]');
+    backButtons.forEach(function(backBtn) {
+      backBtn.addEventListener('click', async function(e) {
+        var modal = backBtn.closest('.modal-dialog');
+        if (modal) {
+          await closeModal(backBtn);
+        }
+      });
+    });
   }
 
   modalButtons.forEach(function(modalBtn) {
@@ -328,7 +228,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
   init();
 });
-
 
 document.addEventListener('DOMContentLoaded', function() {
   const mobileMenuBtn = document.querySelector('.small-screens-button');
@@ -457,4 +356,135 @@ document.addEventListener('DOMContentLoaded', function() {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(setupMenu, 250);
   });
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+  const anchorLinks = document.querySelectorAll('a[href^="#"]');
+
+  anchorLinks.forEach(link => {
+    link.addEventListener('click', function(e) {
+      e.preventDefault();
+
+      const targetId = this.getAttribute('href');
+      if (targetId === '#') return;
+
+      const targetElement = document.querySelector(targetId);
+      if (targetElement) {
+        const yOffset = -200;
+        const y = targetElement.getBoundingClientRect().top + window.pageYOffset + yOffset;
+
+        window.scrollTo({
+          top: y,
+          behavior: 'smooth'
+        });
+      }
+    });
+  });
+});
+
+class CustomSelect {
+  constructor(container) {
+    this.container = container;
+    this.header = container.querySelector('.filter-item-header');
+    this.dropdown = container.querySelector('.filter-item-dropdown');
+    this.options = container.querySelectorAll('.filter-item-option');
+    this.isOpen = false;
+
+    this.init();
+  }
+
+  init() {
+    this.bindEvents();
+    this.setInitialValue();
+  }
+
+  bindEvents() {
+    this.header.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.toggle();
+    });
+
+    this.options.forEach(option => {
+      option.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.selectOption(option);
+        this.close();
+      });
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!this.container.contains(e.target)) {
+        this.close();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.isOpen) {
+        this.close();
+      }
+    });
+  }
+
+  toggle() {
+    this.isOpen ? this.close() : this.open();
+  }
+
+  open() {
+    this.container.classList.add('active');
+    this.isOpen = true;
+  }
+
+  close() {
+    this.container.classList.remove('active');
+    this.isOpen = false;
+  }
+
+  selectOption(option) {
+    const selectedText = option.textContent;
+    this.header.textContent = selectedText;
+
+    const event = new CustomEvent('select-change', {
+      detail: { value: selectedText, element: option }
+    });
+    this.container.dispatchEvent(event);
+  }
+
+  setInitialValue() {
+    const firstOption = this.options[0];
+    if (firstOption) {
+      this.selectOption(firstOption);
+    }
+  }
+
+  getValue() {
+    return this.header.textContent;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const filterItems = document.querySelectorAll('.filter-item');
+
+  filterItems.forEach(item => {
+    new CustomSelect(item);
+  });
+});
+
+
+var swiper3 = new Swiper(".gallery-slider-thumbs", {
+  spaceBetween: 10,
+  slidesPerView: "auto",
+  watchSlidesProgress: true,
+});
+
+var swiper4 = new Swiper(".gallery-slider-main", {
+  loop: true,
+  spaceBetween: 10,
+  effect: "fade",
+  navigation: {
+    nextEl: ".gallery-slider-main .swiper-button-next",
+    prevEl: ".gallery-slider-main .swiper-button-prev",
+  },
+  thumbs: {
+    swiper: swiper3,
+  },
 });
