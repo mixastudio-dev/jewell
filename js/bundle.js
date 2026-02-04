@@ -392,10 +392,11 @@ document.addEventListener('DOMContentLoaded', function() {
         window.location.href = url;
       } else {
         const headerHeight = document.querySelector('header') ? document.querySelector('header').offsetHeight : 0;
-        const yOffset = -headerHeight;
+        const windowHeight = window.innerHeight;
+        const elementHeight = targetElement.offsetHeight;
 
         const elementPosition = targetElement.getBoundingClientRect().top;
-        const offsetPosition = elementPosition + window.pageYOffset + yOffset;
+        const offsetPosition = elementPosition + window.pageYOffset - (windowHeight / 2) + (elementHeight / 2);
 
         window.scrollTo({
           top: offsetPosition,
